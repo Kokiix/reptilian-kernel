@@ -1113,7 +1113,7 @@ static int __ref kernel_init(void *unused)
 	* Print message for OS project 0
 	*/
 
-	pr_emerg("##### Kenneth Deng (UFID: 4512-5132) :3 #####");
+	pr_emerg("### Kenneth Deng (Exercise 2) ###");
 
 	rcu_end_inkernel_boot();
 

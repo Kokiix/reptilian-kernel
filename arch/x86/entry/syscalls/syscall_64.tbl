@@ -345,6 +345,8 @@
 334	common	rseq			__x64_sys_rseq
 424	common	pidfd_send_signal	__x64_sys_pidfd_send_signal
 434	common	pidfd_open		__x64_sys_pidfd_open
+444 common  send_message_call __x64_sys_send_message_call
+445 common  get_message_call __x64_sys_get_message_call
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact

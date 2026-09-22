@@ -911,6 +911,10 @@ asmlinkage long sys_pidfd_send_signal(int pidfd, int sig,
 				       siginfo_t __user *info,
 				       unsigned int flags);
 
+asmlinkage long sys_send_message_call(char __user *msg, uid_t recipient_user);
+asmlinkage long sys_get_message_call(char __user *msg,
+				     uid_t __user *sending_user);
+
 /*
  * Architecture-specific system calls
  */

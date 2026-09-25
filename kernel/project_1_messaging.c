@@ -3,6 +3,7 @@
 #include <linux/list.h>
 #include <linux/compiler.h>
 #include <linux/slab.h>
+#include <linux/uaccess.h>
 
 struct msg_item {
 	char* msg_contents;
@@ -14,20 +15,30 @@ static LIST_HEAD(msg_q_head);
 
 SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_user)
 {
-	char* test_message = "test message";
+	// copy string
+	int msg_len = strlen(msg);
+	char* kspace_msg = kmalloc(strnlen_user(msg, PAGE_SIZE), GFP_KERNEL);
+	if (!kspace_msg) {return -ENOMEM;}
+	strncpy_from_user(kspace_msg, msg, msg_len);
 
+	// create msg struct
 	struct msg_item *new_message;
 	new_message = kmalloc(sizeof(*new_message), GFP_KERNEL);
-	new_message->msg_contents = test_message;
+	if (!new_message) {return -ENOMEM;}
+
+	// fill out msg struct
+	new_message->msg_contents = kspace_msg;
 	// new_message->recipient = 
 	INIT_LIST_HEAD(&new_message->list_node);
 	list_add_tail(&new_message->list_node, &msg_q_head);
 
+	// debug print list
 	struct msg_item *pos;
 	printk(KERN_INFO "List contents:\n");
     list_for_each_entry(pos, &msg_q_head, list_node) {
         printk(KERN_INFO "  Value: %s\n", pos->msg_contents);
     }
+
 	return 0;
 }
 

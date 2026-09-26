@@ -9,6 +9,7 @@
 
 struct msg_item {
 	char* msg_contents;
+	kuid_t sending_user;
 	kuid_t recipient;
 	struct list_head list_node;
 };
@@ -31,6 +32,7 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 
 	// fill out msg struct
 	new_message->msg_contents = kspace_msg;
+	new_message -> sending_user = current_uid();
 	new_message->recipient = make_kuid(current_user_ns(), recipient_id);
 	INIT_LIST_HEAD(&new_message->list_node);
 	list_add_tail(&new_message->list_node, &msg_q_head);
@@ -39,9 +41,10 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 	struct msg_item *pos;
 	printk(KERN_INFO "List contents:\n");
     list_for_each_entry(pos, &msg_q_head, list_node) {
-        printk(KERN_INFO "  Msg: %s\t For: %d", 
+        printk(KERN_INFO "  Msg: %s\t For: %d\t From: %d", 
 			pos->msg_contents,
-			from_kuid(current_user_ns(), pos->recipient));
+			from_kuid(current_user_ns(), pos->recipient),
+			from_kuid(current_user_ns(), pos->sending_user));
     }
 
 	return 0;

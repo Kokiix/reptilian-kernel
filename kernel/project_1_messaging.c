@@ -16,10 +16,8 @@ static LIST_HEAD(msg_q_head);
 SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 {
 	// copy/allocate string
-	int msg_len = strlen(msg);
-	char* kspace_msg = kmalloc(strnlen_user(msg, PAGE_SIZE), GFP_KERNEL);
-	if (!kspace_msg) {return -ENOMEM;}
-	if (strncpy_from_user(kspace_msg, msg, msg_len) < 0) {return -EFAULT;}
+	char* kspace_msg = strndup_user(msg, 1024);
+	if (IS_ERR(kspace_msg)) {return PTR_ERR(kspace_msg);}
 
 	// allocate msg struct
 	struct msg_item *new_message;
@@ -32,7 +30,7 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 	INIT_LIST_HEAD(&new_message->list_node);
 	list_add_tail(&new_message->list_node, &msg_q_head);
 
-	// debug print list
+	// DEBUG: print list
 	struct msg_item *pos;
 	printk(KERN_INFO "List contents:\n");
     list_for_each_entry(pos, &msg_q_head, list_node) {

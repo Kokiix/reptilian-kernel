@@ -25,6 +25,7 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 	struct msg_item *new_message;
 	new_message = kmalloc(sizeof(*new_message), GFP_KERNEL);
 	if (!new_message) {
+		kfree(kspace_msg);
 		return -ENOMEM;
 	}
 

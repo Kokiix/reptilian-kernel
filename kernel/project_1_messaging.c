@@ -4,6 +4,8 @@
 #include <linux/compiler.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/uidgid.h>
+#include <linux/cred.h>
 
 struct msg_item {
 	char* msg_contents;
@@ -22,7 +24,9 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 	// allocate msg struct
 	struct msg_item *new_message;
 	new_message = kmalloc(sizeof(*new_message), GFP_KERNEL);
-	if (!new_message) {return -ENOMEM;}
+	if (!new_message) {
+		return -ENOMEM;
+	}
 
 	// fill out msg struct
 	new_message->msg_contents = kspace_msg;
@@ -45,6 +49,24 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 SYSCALL_DEFINE2(get_message_call, char __user *, msg, uid_t __user *,
 		sending_user)
 {
-	printk(KERN_EMERG "hello world from get");
-	return 0;
+	kuid_t curr_kuid = current_uid();
+
+	struct msg_item *cursor, *tmp;
+	list_for_each_entry_safe(cursor, tmp, &msg_q_head, list_node) {
+		if (uid_eq(cursor->recipient, curr_kuid)) {
+			// write to msg pointer
+			// TODO
+
+			// write to sending user 
+			// TODO
+
+			list_del(&cursor->list_node);
+			kfree(cursor->msg_contents);
+			kfree(cursor);
+
+			return 0;
+		}
+	}
+
+	return -ENOMSG;
 }

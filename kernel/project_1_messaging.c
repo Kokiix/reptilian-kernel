@@ -31,9 +31,12 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 	}
 
 	// fill out msg struct
+	kuid_t kuid = make_kuid(current_user_ns(), recipient_id);
+	if (!uid_valid(kuid)) {return -EINVAL;}
+
 	new_message->msg_contents = kspace_msg;
 	new_message -> sending_user = current_uid();
-	new_message->recipient = make_kuid(current_user_ns(), recipient_id);
+	new_message->recipient = kuid;
 	INIT_LIST_HEAD(&new_message->list_node);
 	list_add_tail(&new_message->list_node, &msg_q_head);
 
@@ -58,14 +61,17 @@ SYSCALL_DEFINE2(get_message_call, char __user *, msg, uid_t __user *,
 	struct msg_item *cursor, *tmp;
 	list_for_each_entry_safe(cursor, tmp, &msg_q_head, list_node) {
 		if (uid_eq(cursor->recipient, curr_kuid)) {
-			// write to msg pointer
-			// TODO
+			char* kmsg = cursor->msg_contents;
 
-			// write to sending user 
-			// TODO
+			// TODO: check return value of copy_to_user?
+
+			copy_to_user(msg, kmsg, strlen(kmsg) + 1);
+
+			uid_t uid = from_kuid(current_user_ns(), cursor->sending_user);
+			copy_to_user(sending_user, &uid, sizeof(uid));
 
 			list_del(&cursor->list_node);
-			kfree(cursor->msg_contents);
+			kfree(kmsg);
 			kfree(cursor);
 
 			return 0;

@@ -23,7 +23,7 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 	if (!kspace_msg) {
 		return -ENOMEM;
 	}
-	int cpy_result = strncpy_from_user(kspace_msg, msg, 1025);
+	int cpy_result = strncpy_from_user(kspace_msg, msg, 1024);
 	if (cpy_result < 0) {
 		kfree(kspace_msg);
 		return cpy_result;
@@ -53,14 +53,14 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 	list_add_tail(&new_message->list_node, &msg_q_head);
 
 	// DEBUG: print list
-	struct msg_item *pos;
-	printk(KERN_INFO "List contents:\n");
-    list_for_each_entry(pos, &msg_q_head, list_node) {
-        printk(KERN_INFO "  Msg: %s\t For: %d\t From: %d", 
-			pos->msg_contents,
-			from_kuid(current_user_ns(), pos->recipient),
-			from_kuid(current_user_ns(), pos->sending_user));
-    }
+	// struct msg_item *pos;
+	// printk(KERN_INFO "List contents:\n");
+    // list_for_each_entry(pos, &msg_q_head, list_node) {
+    //     printk(KERN_INFO "  Msg: %s\t For: %d\t From: %d", 
+	// 		pos->msg_contents,
+	// 		from_kuid(current_user_ns(), pos->recipient),
+	// 		from_kuid(current_user_ns(), pos->sending_user));
+    // }
 
 	return 0;
 }
@@ -80,13 +80,15 @@ SYSCALL_DEFINE2(get_message_call, char __user *, msg, uid_t __user *,
 			bytes_not_copied += copy_to_user(msg, kmsg, strlen(kmsg) + 1);
 
 			uid_t uid = from_kuid(current_user_ns(), cursor->sending_user);
-			bytes_not_copied += opy_to_user(sending_user, &uid, sizeof(uid));
+			bytes_not_copied += copy_to_user(sending_user, &uid, sizeof(uid));
 
-			list_del(&cursor->list_node);
-			kfree(kmsg);
-			kfree(cursor);
+			if (bytes_not_copied > 0) {return EFAULT;}
+			else {
+				list_del(&cursor->list_node);
+				kfree(kmsg);
+				kfree(cursor);
+			}
 
-			if (bytes_not_copied > 0) {return -1;}
 			return 0;
 		}
 	}

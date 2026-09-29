@@ -32,7 +32,11 @@ SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 
 	// fill out msg struct
 	kuid_t kuid = make_kuid(current_user_ns(), recipient_id);
-	if (!uid_valid(kuid)) {return -EINVAL;}
+	if (!uid_valid(kuid)) {
+		kfree(kspace_msg);
+		kfree(new_message);
+		return -EINVAL;
+	}
 
 	new_message->msg_contents = kspace_msg;
 	new_message -> sending_user = current_uid();

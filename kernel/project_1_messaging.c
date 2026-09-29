@@ -19,8 +19,16 @@ static LIST_HEAD(msg_q_head);
 SYSCALL_DEFINE2(send_message_call, char __user *, msg, uid_t, recipient_id)
 {
 	// copy/allocate string
-	char* kspace_msg = strndup_user(msg, 1024);
-	if (IS_ERR(kspace_msg)) {return PTR_ERR(kspace_msg);}
+	char* kspace_msg = kmalloc(1025, GFP_KERNEL);
+	if (!kspace_msg) {
+		return -ENOMEM;
+	}
+	int cpy_result = strncpy_from_user(kspace_msg, msg, 1025);
+	if (cpy_result < 0) {
+		kfree(kspace_msg);
+		return cpy_result;
+	}
+	kspace_msg[1024] = '\0';
 
 	// allocate msg struct
 	struct msg_item *new_message;
@@ -67,20 +75,21 @@ SYSCALL_DEFINE2(get_message_call, char __user *, msg, uid_t __user *,
 		if (uid_eq(cursor->recipient, curr_kuid)) {
 			char* kmsg = cursor->msg_contents;
 
-			// TODO: check return value of copy_to_user?
+			int bytes_not_copied = 0;
 
-			copy_to_user(msg, kmsg, strlen(kmsg) + 1);
+			bytes_not_copied += copy_to_user(msg, kmsg, strlen(kmsg) + 1);
 
 			uid_t uid = from_kuid(current_user_ns(), cursor->sending_user);
-			copy_to_user(sending_user, &uid, sizeof(uid));
+			bytes_not_copied += opy_to_user(sending_user, &uid, sizeof(uid));
 
 			list_del(&cursor->list_node);
 			kfree(kmsg);
 			kfree(cursor);
 
+			if (bytes_not_copied > 0) {return -1;}
 			return 0;
 		}
 	}
 
-	return -ENOMSG;
+	return 1;
 }
